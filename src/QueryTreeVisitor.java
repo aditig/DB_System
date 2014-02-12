@@ -12,6 +12,7 @@ public class QueryTreeVisitor implements Visitor {
 	private ArrayList<String> orderColumns = new ArrayList<String>();
 	private ArrayList<String> groupColumns = new ArrayList<String>();
 	private String queryType;
+	private boolean isDistinct;
 	
 	@Override
     public Visitable visit(Visitable visitable) throws StandardException {
@@ -32,7 +33,7 @@ public class QueryTreeVisitor implements Visitor {
 	//TODO write a different method for printing
 	private void processSelect(SelectNode selNode) throws StandardException {
 		FromList fList = selNode.getFromList();
-		boolean first = true;
+		isDistinct = selNode.isDistinct();
 		
 		for (FromTable t : fList) {
 			fromTables.add(t.getTableName().getTableName());
@@ -44,37 +45,9 @@ public class QueryTreeVisitor implements Visitor {
 		ResultColumnList colList = selNode.getResultColumns();
 		//r.treePrint();
 		//System.out.print("Columns: ");
-		first = true;
 		for (ResultColumn col : colList) {
 			columns.add(col.getName());
 		}
-		/*	if (first) {
-				first = false;
-			}
-			else {
-				System.out.print(", ");
-			}
-			System.out.print(col.getName());
-		}
-		System.out.println();*/
-		
-		/*System.out.print("Distinct: ");
-		if(!selNode.isDistinct()) {
-			System.out.println("NA");
-		}
-		else {
-    		first = true;
-    		for (ResultColumn col : colList) {
-    			if (first) {
-    				first = false;
-    			}
-    			else {
-    				System.out.print(", ");
-    			}
-    			System.out.print(col.getName());
-    		}
-    		System.out.println();
-		}*/
 		
 		ValueNode have = selNode.getHavingClause();
 		if(have != null) {
@@ -88,51 +61,20 @@ public class QueryTreeVisitor implements Visitor {
 				orderColumns.add(col.getExpression().getColumnName());
 			}
 		}
-		/*System.out.print("Order By: ");
-		if (orderList == null) {
-			System.out.println("NA");
-		}
-		else {
-    		first = true;
-    		for (OrderByColumn col : orderList) {
-    			if (first) {
-    				first = false;
-    			}
-    			else {
-    				System.out.print(", ");
-    			}
-    			System.out.print(col.getExpression().getColumnName());
-    		}
-    		System.out.println();
-		}*/
 		
 		GroupByList groupList = selNode.getGroupByList();
 		if(groupList != null) {
 			for(GroupByColumn col : groupList) {
 				groupColumns.add(col.getColumnName());
 			}
-		}
-		/*System.out.print("Group By: ");
-		if (groupList == null) {
-			System.out.println("NA");
-		}
-		else {
-    		first = true;
-    		for (GroupByColumn col : groupList) {
-    			if (first) {
-    				first = false;
-    			}
-    			else {
-    				System.out.print(", ");
-    			}
-    			System.out.print(col.getColumnName());
-    			
-    		}
-    		System.out.println();
-		}*/
+		}		
 	}
 	
 	public void printQuery() {
+		if(queryType.equals("SELECT")) {
+			System.out.println("Querytype: " + queryType);
+		}
+		
 		boolean first = true;
 		System.out.print("Tables: ");
 		for (String s : fromTables) {
@@ -145,8 +87,75 @@ public class QueryTreeVisitor implements Visitor {
 			System.out.print(s);
 		}
 		System.out.println();
+		
+		first = true;
+		System.out.print("Columns: ");
+		for (String s : columns) {
+			if (first) {
+				first = false;
+			}
+			else {
+				System.out.print(", ");
+			}
+			System.out.print(s);
+		}
+		System.out.println();
+		
+		first = true;
+		System.out.print("Distinct: ");
+		if(!isDistinct) {
+			System.out.println("NA");
+		}
+		else {
+			for (String s : columns) {
+				if (first) {
+					first = false;
+				}
+				else {
+					System.out.print(", ");
+				}
+				System.out.print(s);
+			}
+			System.out.println();
+		}
+		
+		first = true;
+		System.out.print("Order By: ");
+		if (orderColumns.size() == 0) {
+			System.out.println("NA");
+		}
+		else {
+			for (String s : columns) {
+				if (first) {
+					first = false;
+				}
+				else {
+					System.out.print(", ");
+				}
+				System.out.print(s);
+			}
+			System.out.println();
+		}
+		
+		first = true;
+		System.out.print("Group By: ");
+		if (groupColumns.size() == 0) {
+			System.out.println("NA");
+		}
+		else {
+			for (String s : columns) {
+				if (first) {
+					first = false;
+				}
+				else {
+					System.out.print(", ");
+				}
+				System.out.print(s);
+			}
+			System.out.println();
+		}
 	}
-
+	
     @Override
     public boolean visitChildrenFirst(Visitable node) {
         return false;
