@@ -3,6 +3,7 @@ import java.util.ArrayList;
 public class Table {
 	private String name;
 	private ArrayList<Page> pages = new ArrayList<Page>();
+	private ArrayList<Attribute> attr = new ArrayList<Attribute>();
 	
 	Table (String tablename) {
 		name = tablename;
@@ -30,6 +31,10 @@ public class Table {
 	
 	public Page getLastPage() {
 		return pages.get(pages.size() - 1);
+	}
+	
+	public void addAttr(Attribute a) {
+		attr.add(a);
 	}
 
 }
