@@ -9,8 +9,7 @@ import java.util.Scanner;
 public class DBSystem {
 	private int pageSize, numPages;
 	private String path;
-	private ArrayList<Table> tables = new ArrayList<Table>();
-	private ArrayList<Attributes> attr = new ArrayList<Attributes>();
+	private ArrayList<Table> tables = new ArrayList<Table>();	
 	private MainMemory m;
 	
 	public void readConfig(String configFilePath) {
@@ -32,11 +31,13 @@ public class DBSystem {
 			
 			while(sc.hasNext("BEGIN")) {
 				sc.next("BEGIN");
-				tables.add(new Table(sc.next()));
+				Table t = new Table(sc.next());
+				tables.add(t);
 				while(!(sc.hasNext("END"))){
-					colName = sc.next();//.substring(0, sc.next().length()-1);
+					colName = sc.next();
 					//System.out.println(colName.substring(0,colName.length()-1));
-					attr.add(new Attributes(colName.substring(0,colName.length()-1), sc.next()));
+					//TODO create <table>.data file
+					t.addAttr(new Attribute(colName.substring(0, colName.length() - 1), sc.next()));
 				}
 				sc.next("END");
 			}

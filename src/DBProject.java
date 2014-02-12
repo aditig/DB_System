@@ -35,7 +35,9 @@ public class DBProject {
         h.visit(stmt);
         System.out.println(h.hasNode());*/
         //stmt.treePrint();
-        stmt.accept(new QueryTreeVisitor());
+        QueryTreeVisitor v = new QueryTreeVisitor();
+        stmt.accept(v);
+        v.printQuery();
         System.out.println();
         
 	}

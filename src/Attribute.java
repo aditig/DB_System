@@ -1,11 +1,11 @@
 
-public class Attributes {
+public class Attribute {
 	private String name;
 	private int dataType;
 	
-	Attributes (String columnName, String type) {
+	Attribute (String columnName, String type) {
 		name = columnName;
-		System.out.println("col name and type " + name + " " + type);
+		//System.out.println("col name and type " + name + " " + type);
 		
 		if (type.equals("int")) {
 			dataType = 1;
