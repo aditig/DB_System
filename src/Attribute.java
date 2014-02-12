@@ -1,28 +1,23 @@
+import com.foundationdb.sql.types.DataTypeDescriptor;
+
 
 public class Attribute {
 	private String name;
-	private int dataType;
+	private String dataType;
 	
 	Attribute (String columnName, String type) {
 		name = columnName;
-		//System.out.println("col name and type " + name + " " + type);
+		//System.out.println("Column name and type " + name + " " + type);
 		
-		if (type.equals("int")) {
-			dataType = 1;
-		}
-		else if (type.equals("String")) {
-			dataType = 2;
-		}
-		else if (type.equals("float")) {
-			dataType = 3;
-		}
+		dataType = type;
+		
 	}
 	
 	public String getName() {
 		return name;
 	}
 	
-	public int getDataType() {
+	public String getDataType() {
 		return dataType;
 	}
 

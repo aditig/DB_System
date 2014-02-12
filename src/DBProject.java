@@ -28,7 +28,7 @@ public class DBProject {
 		db.insertRecord("countries", "record");*/
 		
 		SQLParser parser = new SQLParser();
-        StatementNode stmt = parser.parseStatement("select distinct a from b where a > 4");
+        StatementNode stmt = parser.parseStatement("create table abc (a String, b int)");
         //System.out.println(stmt.toString());
         /*FromSubquery f = new FromSubquery();
         HasNodeVisitor h = new HasNodeVisitor(f.getClass());
@@ -37,7 +37,7 @@ public class DBProject {
         //stmt.treePrint();
         QueryTreeVisitor v = new QueryTreeVisitor();
         stmt.accept(v);
-        v.printQuery();
+        //v.printQuery();
         System.out.println();
         
 	}

@@ -6,7 +6,6 @@ import com.foundationdb.sql.parser.*;
 
 public class QueryTreeVisitor implements Visitor {
 	private QueryTreeNode node;
-	private CursorNode cNode;
 	private ArrayList<String> fromTables = new ArrayList<String>();
 	private ArrayList<String> columns = new ArrayList<String>();
 	private ArrayList<String> orderColumns = new ArrayList<String>();
@@ -19,18 +18,28 @@ public class QueryTreeVisitor implements Visitor {
         node = (QueryTreeNode)visitable;
 
         if(node.getNodeType() == NodeTypes.CURSOR_NODE) {
-        	cNode = (CursorNode)node;
+        	CursorNode cursorNode = (CursorNode)node;
         	//c.treePrint();
-        	queryType = cNode.statementToString();
-        	//System.out.println("Querytype: " + queryType);
+        	queryType = cursorNode.statementToString();
+        	
         	if(queryType.equals("SELECT")) {
-        		processSelect((SelectNode)cNode.getResultSetNode());
+        		processSelect((SelectNode)cursorNode.getResultSetNode());
         	}
+        } else if( node.getNodeType() == NodeTypes.CREATE_TABLE_NODE) {
+        	System.out.println("create");
+        	processCreate((CreateTableNode)node);
         }
         return visitable;
     }
 	
-	//TODO write a different method for printing
+	private void processCreate(CreateTableNode createNode) {
+		TableElementList elem = createNode.getTableElementList();
+		ColumnDefinitionNode t = (ColumnDefinitionNode)elem.get(0);
+		t.treePrint();
+		System.out.println(t.getType());
+		//TODO continue here. create Table, add Attribute
+		
+	}
 	private void processSelect(SelectNode selNode) throws StandardException {
 		FromList fList = selNode.getFromList();
 		isDistinct = selNode.isDistinct();
@@ -38,13 +47,11 @@ public class QueryTreeVisitor implements Visitor {
 		for (FromTable t : fList) {
 			fromTables.add(t.getTableName().getTableName());
 		}
-		
 		//TODO select *
 		//TODO null condition
 		
 		ResultColumnList colList = selNode.getResultColumns();
-		//r.treePrint();
-		//System.out.print("Columns: ");
+		
 		for (ResultColumn col : colList) {
 			columns.add(col.getName());
 		}
@@ -55,7 +62,7 @@ public class QueryTreeVisitor implements Visitor {
 			//System.out.println(have.toString());
 		}
 		
-		OrderByList orderList = cNode.getOrderByList();
+		OrderByList orderList = ((CursorNode)node).getOrderByList();
 		if(orderList != null) {
 			for (OrderByColumn col : orderList) {
 				orderColumns.add(col.getExpression().getColumnName());
