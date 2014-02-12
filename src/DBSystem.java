@@ -10,11 +10,13 @@ public class DBSystem {
 	private int pageSize, numPages;
 	private String path;
 	private ArrayList<Table> tables = new ArrayList<Table>();
+	private ArrayList<Attributes> attr = new ArrayList<Attributes>();
 	private MainMemory m;
 	
 	public void readConfig(String configFilePath) {
 		File file = new File(configFilePath);
 		Scanner sc = null;
+		String colName;
 		
 		try {
 			sc = new Scanner(file);
@@ -32,10 +34,13 @@ public class DBSystem {
 				sc.next("BEGIN");
 				tables.add(new Table(sc.next()));
 				while(!(sc.hasNext("END"))){
-					sc.next();
+					colName = sc.next();//.substring(0, sc.next().length()-1);
+					//System.out.println(colName.substring(0,colName.length()-1));
+					attr.add(new Attributes(colName.substring(0,colName.length()-1), sc.next()));
 				}
 				sc.next("END");
 			}
+			
 			m = new MainMemory(numPages);
 		}
 		catch (FileNotFoundException e) {

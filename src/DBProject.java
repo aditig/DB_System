@@ -13,10 +13,10 @@ public class DBProject {
 	public static void main(String[] args) throws IOException, StandardException {
 		// TODO Auto-generated method stub
 		
-		/*DBSystem db = new DBSystem();
+		DBSystem db = new DBSystem();
 		
 		db.readConfig("config.txt");
-		db.populateDBInfo();
+		/*db.populateDBInfo();
 		db.getRecord("countries", 5);
 		db.getRecord("countries", 5);
 		db.getRecord("countries", 8);
@@ -28,7 +28,7 @@ public class DBProject {
 		db.insertRecord("countries", "record");*/
 		
 		SQLParser parser = new SQLParser();
-        StatementNode stmt = parser.parseStatement("select a, c from b group by a");
+        StatementNode stmt = parser.parseStatement("select a from b where a > 4");
         //System.out.println(stmt.toString());
         /*FromSubquery f = new FromSubquery();
         HasNodeVisitor h = new HasNodeVisitor(f.getClass());
