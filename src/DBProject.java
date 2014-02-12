@@ -1,5 +1,8 @@
 import java.io.IOException;
 
+import com.foundationdb.sql.StandardException;
+import com.foundationdb.sql.parser.*;
+
 
 public class DBProject {
 
@@ -7,10 +10,10 @@ public class DBProject {
 	 * @param args
 	 * @throws IOException 
 	 */
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, StandardException {
 		// TODO Auto-generated method stub
 		
-		DBSystem db = new DBSystem();
+		/*DBSystem db = new DBSystem();
 		
 		db.readConfig("config.txt");
 		db.populateDBInfo();
@@ -22,7 +25,20 @@ public class DBProject {
 		db.getRecord("countries", 1);
 		db.getRecord("countries", 8);
 		db.getRecord("countries", 5);
-		db.insertRecord("countries", "record");
+		db.insertRecord("countries", "record");*/
+		
+		SQLParser parser = new SQLParser();
+        StatementNode stmt = parser.parseStatement("select a, c from b group by a");
+        //System.out.println(stmt.toString());
+        /*FromSubquery f = new FromSubquery();
+        HasNodeVisitor h = new HasNodeVisitor(f.getClass());
+        h.visit(stmt);
+        System.out.println(h.hasNode());*/
+        //stmt.treePrint();
+        stmt.accept(new QueryTreeVisitor());
+        System.out.println();
+        
 	}
+
 
 }
