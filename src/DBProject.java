@@ -16,8 +16,8 @@ public class DBProject {
 		DBSystem db = new DBSystem();
 		
 		db.readConfig("config.txt");
-		/*db.populateDBInfo();
-		db.getRecord("countries", 5);
+		db.populateDBInfo();
+		/*db.getRecord("countries", 5);
 		db.getRecord("countries", 5);
 		db.getRecord("countries", 8);
 		db.getRecord("countries", 18);
@@ -28,7 +28,7 @@ public class DBProject {
 		db.insertRecord("countries", "record");*/
 		
 		SQLParser parser = new SQLParser();
-        StatementNode stmt = parser.parseStatement("create table abc (a String, b int)");
+        StatementNode stmt = parser.parseStatement("CREATE TABLE countries (a VARCHAR(5), b INTEGER)");
         //System.out.println(stmt.toString());
         /*FromSubquery f = new FromSubquery();
         HasNodeVisitor h = new HasNodeVisitor(f.getClass());
@@ -38,7 +38,9 @@ public class DBProject {
         QueryTreeVisitor v = new QueryTreeVisitor();
         stmt.accept(v);
         //v.printQuery();
-        System.out.println();
+        //System.out.println();
+        
+        db.queryType(" CREATE  TABLE abc (a VARCHAR(5), b INTEGER)");
         
 	}
 

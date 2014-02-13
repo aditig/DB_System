@@ -26,7 +26,6 @@ public class QueryTreeVisitor implements Visitor {
         		processSelect((SelectNode)cursorNode.getResultSetNode());
         	}
         } else if( node.getNodeType() == NodeTypes.CREATE_TABLE_NODE) {
-        	System.out.println("create");
         	processCreate((CreateTableNode)node);
         }
         return visitable;
@@ -34,10 +33,15 @@ public class QueryTreeVisitor implements Visitor {
 	
 	private void processCreate(CreateTableNode createNode) {
 		TableElementList elem = createNode.getTableElementList();
-		ColumnDefinitionNode t = (ColumnDefinitionNode)elem.get(0);
-		t.treePrint();
-		System.out.println(t.getType());
-		//TODO continue here. create Table, add Attribute
+		
+		//System.out.println("table name: " + createNode.getFullName());
+		
+		//TODO check if table already exists
+		Table table = new Table(createNode.getFullName());
+		for (TableElementNode t : elem) {
+			ColumnDefinitionNode c = (ColumnDefinitionNode) t;
+			table.addAttr(new Attribute (c.getName(), c.getType().getSQLstring()));
+		}
 		
 	}
 	private void processSelect(SelectNode selNode) throws StandardException {

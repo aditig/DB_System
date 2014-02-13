@@ -64,7 +64,9 @@ public class DBSystem {
 			size = 0;
 			start = 0;
 			count = 0;
-			file = new File(path + t.getName() + ".csv");
+			file = new File(t.getName() + ".csv");
+			//TODO add path
+			//file = new File(path + t.getName() + ".csv");
 			try {
 				sc = new Scanner(file);
 				while(sc.hasNextLine()) {
@@ -134,4 +136,26 @@ public class DBSystem {
         f.append(record + '\n');
         f.close();
 	}
+	
+	public void queryType (String query) {
+		String s[] = query.trim().split("\\s+");
+		if (s[0].equalsIgnoreCase("CREATE")) {
+			//process create
+		} else if (s[0].equalsIgnoreCase("SELECT")) {
+			//process select
+		}
+	}
+	
+	public void addTable(Table t) {
+		tables.add(t);
+	}
+
+	public boolean isTable(String name) {
+		for (Table t : tables) {
+			if (t.getName().equals(name))
+				return true;
+		}
+		return false;
+	}
 }
+
