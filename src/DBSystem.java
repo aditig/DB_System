@@ -5,6 +5,26 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+import com.foundationdb.sql.StandardException;
+import com.foundationdb.sql.parser.ColumnDefinitionNode;
+import com.foundationdb.sql.parser.CreateTableNode;
+import com.foundationdb.sql.parser.CursorNode;
+import com.foundationdb.sql.parser.FromList;
+import com.foundationdb.sql.parser.FromTable;
+import com.foundationdb.sql.parser.GroupByColumn;
+import com.foundationdb.sql.parser.GroupByList;
+import com.foundationdb.sql.parser.OrderByColumn;
+import com.foundationdb.sql.parser.OrderByList;
+import com.foundationdb.sql.parser.QueryTreeNode;
+import com.foundationdb.sql.parser.ResultColumn;
+import com.foundationdb.sql.parser.ResultColumnList;
+import com.foundationdb.sql.parser.SQLParser;
+import com.foundationdb.sql.parser.SelectNode;
+import com.foundationdb.sql.parser.StatementNode;
+import com.foundationdb.sql.parser.TableElementList;
+import com.foundationdb.sql.parser.TableElementNode;
+import com.foundationdb.sql.parser.ValueNode;
+
 
 public class DBSystem {
 	private int pageSize, numPages;
@@ -140,9 +160,192 @@ public class DBSystem {
 	public void queryType (String query) {
 		String s[] = query.trim().split("\\s+");
 		if (s[0].equalsIgnoreCase("CREATE")) {
-			//process create
+			createCommand(query);
 		} else if (s[0].equalsIgnoreCase("SELECT")) {
-			//process select
+			selectCommand(query);
+		}
+	}
+	
+	public void createCommand (String query) {
+		SQLParser parser = new SQLParser();
+        StatementNode node;
+		try {
+			node = parser.parseStatement(query);
+			CreateTableNode createNode = (CreateTableNode) node;
+			
+			TableElementList elem = createNode.getTableElementList();
+			
+			//TODO check if table already exists
+			if (isTable (createNode.getFullName())) {
+				System.out.println("Query Invalid");
+			} else {
+				Table table = new Table(createNode.getFullName());
+				System.out.println("Querytype:create\nTablename:" + table.getName());
+				
+				boolean isFirst = true;
+				System.out.print("Attributes:");
+				for (TableElementNode t : elem) {
+					if(isFirst) {
+						isFirst = false;
+					} else {
+						System.out.print(",");
+					}
+					ColumnDefinitionNode c = (ColumnDefinitionNode) t;
+					table.addAttr(new Attribute (c.getName(), c.getType().getSQLstring()));
+					System.out.print(c.getName() + " " + c.getType().getSQLstring());
+				}
+				System.out.println("\n");
+			}
+			
+		} catch (StandardException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public void selectCommand (String query) {
+		SQLParser parser = new SQLParser();
+        StatementNode node;
+		try {
+			node = parser.parseStatement(query);
+		
+	    	ArrayList<String> fromTables = new ArrayList<String>();
+	    	ArrayList<String> columns = new ArrayList<String>();
+	    	ArrayList<String> orderColumns = new ArrayList<String>();
+	    	ArrayList<String> groupColumns = new ArrayList<String>();
+	    	
+	    	SelectNode selNode = (SelectNode) ((CursorNode)node).getResultSetNode();
+	    	
+	    	FromList fList = selNode.getFromList();
+			boolean isDistinct = selNode.isDistinct();
+			
+			for (FromTable t : fList) {
+				fromTables.add(t.getTableName().getTableName());
+			}
+			//TODO select *
+			//TODO null condition
+			
+			ResultColumnList colList = selNode.getResultColumns();
+			
+			for (ResultColumn col : colList) {
+				columns.add(col.getName());
+			}
+			
+			ValueNode have = selNode.getHavingClause();
+			if(have != null) {
+				//have.treePrint();
+				//System.out.println(have.toString());
+			}
+			
+			OrderByList orderList = ((CursorNode)node).getOrderByList();
+			if(orderList != null) {
+				for (OrderByColumn col : orderList) {
+					orderColumns.add(col.getExpression().getColumnName());
+				}
+			}
+			
+			GroupByList groupList = selNode.getGroupByList();
+			if(groupList != null) {
+				for(GroupByColumn col : groupList) {
+					groupColumns.add(col.getColumnName());
+				}
+			}
+			
+			//TODO validation here
+			boolean valid = true;
+			if (!valid) {
+				System.out.println("Query Invalid");
+			} else {
+				//PRINT QUERY TOKENS
+				System.out.print("Querytype:select\nTablename:");
+				boolean first = true;
+				for (String s : fromTables) {
+					if (first) {
+						first = false;
+					}
+					else {
+						System.out.print(", ");
+					}
+					System.out.print(s);
+				}
+				System.out.println();
+				
+				first = true;
+				System.out.print("Columns:");
+				for (String s : columns) {
+					if (first) {
+						first = false;
+					}
+					else {
+						System.out.print(",");
+					}
+					System.out.print(s);
+				}
+				System.out.println();
+				
+				first = true;
+				System.out.print("Distinct:");
+				if(!isDistinct) {
+					System.out.println("NA");
+				}
+				else {
+					for (String s : columns) {
+						if (first) {
+							first = false;
+						}
+						else {
+							System.out.print(",");
+						}
+						System.out.print(s);
+					}
+					System.out.println();
+				}
+				
+				//TODO print condition
+				
+				first = true;
+				System.out.print("Orderby:");
+				if (orderColumns.size() == 0) {
+					System.out.println("NA");
+				}
+				else {
+					for (String s : columns) {
+						if (first) {
+							first = false;
+						}
+						else {
+							System.out.print(",");
+						}
+						System.out.print(s);
+					}
+					System.out.println();
+				}
+				
+				first = true;
+				System.out.print("Groupby:");
+				if (groupColumns.size() == 0) {
+					System.out.println("NA");
+				}
+				else {
+					for (String s : columns) {
+						if (first) {
+							first = false;
+						}
+						else {
+							System.out.print(",");
+						}
+						System.out.print(s);
+					}
+					System.out.println();
+					
+				}
+	
+				//TODO print having
+				System.out.println();
+			}
+		} catch (StandardException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 	

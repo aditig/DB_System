@@ -26,21 +26,9 @@ public class DBProject {
 		db.getRecord("countries", 8);
 		db.getRecord("countries", 5);
 		db.insertRecord("countries", "record");*/
-		
-		SQLParser parser = new SQLParser();
-        StatementNode stmt = parser.parseStatement("CREATE TABLE countries (a VARCHAR(5), b INTEGER)");
-        //System.out.println(stmt.toString());
-        /*FromSubquery f = new FromSubquery();
-        HasNodeVisitor h = new HasNodeVisitor(f.getClass());
-        h.visit(stmt);
-        System.out.println(h.hasNode());*/
-        //stmt.treePrint();
-        QueryTreeVisitor v = new QueryTreeVisitor();
-        stmt.accept(v);
-        //v.printQuery();
-        //System.out.println();
         
-        db.queryType(" CREATE  TABLE abc (a VARCHAR(5), b INTEGER)");
+        db.queryType("CREATE TABLE abc (a VARCHAR(5), b INTEGER)");
+        db.queryType("SELECT a from abc");
         
 	}
 
