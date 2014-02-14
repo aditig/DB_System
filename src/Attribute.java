@@ -5,6 +5,7 @@ public class Attribute {
 	private String name;
 	private int dataType;
 	private int stringLength;
+	private String dataTypeName;
 	
 	Attribute (String columnName, String type) {
 		name = columnName;
@@ -12,11 +13,14 @@ public class Attribute {
 		
 		if(type.toUpperCase().equals("INTEGER")) {
 			dataType = INTEGER;
-		} else if(type.toUpperCase().equals("FLOAT")) {
+			setDataTypeName("INTEGER");
+		} else if(type.toUpperCase().equals("FLOAT") || type.toUpperCase().equals("DOUBLE")) {
 			dataType = FLOAT;
+			setDataTypeName("FLOAT");
 		} else if(type.toUpperCase().startsWith("VARCHAR")) {
 			dataType = VARCHAR;
 			stringLength = Integer.parseInt(type.substring(8, type.length() - 1));
+			setDataTypeName("VARCHAR" + "(" + Integer.toString(stringLength) + ")");
 		}
 	}
 	
@@ -28,22 +32,16 @@ public class Attribute {
 		return dataType;
 	}
 	
-	public boolean isDataType (String type) {
-		int t = 0;
-		if(type.toUpperCase().equals("INTEGER") && dataType != INTEGER)
-			return false;
-		else if(type.toUpperCase().equals("FLOAT") && dataType != FLOAT)
-			return false;
-		else if(type.toUpperCase().startsWith("VARCHAR") && dataType == VARCHAR) {
-			t = Integer.parseInt(type.substring(8, type.length() - 1));
-			if(t != stringLength)
-				return false;
-		}
-		return true;
-	}
-	
 	public int getStringLength() {
 		return stringLength;
+	}
+
+	public String getDataTypeName() {
+		return dataTypeName;
+	}
+
+	public void setDataTypeName(String dataTypeName) {
+		this.dataTypeName = dataTypeName;
 	}
 
 }

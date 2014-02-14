@@ -27,8 +27,8 @@ public class DBProject {
 		db.getRecord("countries", 5);
 		db.insertRecord("countries", "record");*/
         
-        db.queryType("CREATE TABLE abc (a VARCHAR(5), b INTEGER)");
-        db.queryType("SELECT a from abc having b != 3");
+        db.queryType("CREATE TABLE abc (a VARCHAR(5), b INTEGER, c FLOAT)");
+        db.queryType("SELECT a from abc where b > 0 having (c < 5 and c > 3) or b = 2");
         
 	}
 
