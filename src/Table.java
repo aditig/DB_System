@@ -54,4 +54,12 @@ public class Table {
 		}
 		return null;
 	}
+	
+	public Attribute getColumn (int i) {
+		return attr.get(i);
+	}
+	
+	public int numColumns () {
+		return attr.size();
+	}
 }

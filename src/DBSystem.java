@@ -210,13 +210,15 @@ public class DBSystem {
 			for (FromTable t : fList) {
 				fromTables.add(t.getTableName().getTableName());
 			}
-			//TODO select *
 			//TODO null condition
 			
 			ResultColumnList colList = selNode.getResultColumns();
 			
-			for (ResultColumn col : colList) {
-				columns.add(col.getName());
+			boolean allCol = colList.get(0).getNodeType() == NodeTypes.ALL_RESULT_COLUMN;
+			if(!allCol) {
+				for (ResultColumn col : colList) {
+					columns.add(col.getName());
+				}
 			}
 			
 			boolean valid = true;
@@ -276,6 +278,22 @@ public class DBSystem {
 				
 				first = true;
 				System.out.print("Columns:");
+				if(allCol) {
+					//print all column names
+					for (String tb : fromTables) {
+						int index = -1;
+						for (Table t : tables) {
+							if (t.getName().equals(tb)) {
+								index = tables.indexOf(t);
+								break;
+							}
+						}
+						Table t = tables.get(index);
+						for (int i = 0; i < t.numColumns(); i++) {
+							columns.add(t.getColumn(i).getName());
+						}
+					}
+				}
 				for (String s : columns) {
 					if (first) {
 						first = false;

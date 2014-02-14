@@ -28,7 +28,7 @@ public class DBProject {
 		db.insertRecord("countries", "record");*/
         
         db.queryType("CREATE TABLE abc (a VARCHAR(5), b INTEGER, c FLOAT)");
-        db.queryType("SELECT a from abc where a like 'ab'");
+        db.queryType("SELECT * from abc where a like 'ab'");
         
 	}
 
