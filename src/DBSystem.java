@@ -6,7 +6,24 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 import com.foundationdb.sql.StandardException;
-import com.foundationdb.sql.parser.*;
+import com.foundationdb.sql.parser.ColumnDefinitionNode;
+import com.foundationdb.sql.parser.CreateTableNode;
+import com.foundationdb.sql.parser.CursorNode;
+import com.foundationdb.sql.parser.FromList;
+import com.foundationdb.sql.parser.FromTable;
+import com.foundationdb.sql.parser.GroupByColumn;
+import com.foundationdb.sql.parser.GroupByList;
+import com.foundationdb.sql.parser.OrderByColumn;
+import com.foundationdb.sql.parser.OrderByList;
+import com.foundationdb.sql.parser.QueryTreeNode;
+import com.foundationdb.sql.parser.ResultColumn;
+import com.foundationdb.sql.parser.ResultColumnList;
+import com.foundationdb.sql.parser.SQLParser;
+import com.foundationdb.sql.parser.SelectNode;
+import com.foundationdb.sql.parser.StatementNode;
+import com.foundationdb.sql.parser.TableElementList;
+import com.foundationdb.sql.parser.TableElementNode;
+import com.foundationdb.sql.parser.ValueNode;
 
 
 public class DBSystem {
@@ -175,9 +192,11 @@ public class DBSystem {
 					}
 					ColumnDefinitionNode c = (ColumnDefinitionNode) t;
 					table.addAttr(new Attribute (c.getName(), c.getType().getSQLstring()));
+					
 					System.out.print(c.getName() + " " + c.getType().getSQLstring());
 				}
 				System.out.println("\n");
+				tables.add(table);
 			}
 			
 		} catch (StandardException e) {
@@ -237,6 +256,36 @@ public class DBSystem {
 			
 			//TODO validation here
 			valid = true;
+			for (String t : fromTables) {
+				if (!isTable(t)) {
+					valid = false;
+					break;
+				}
+			}
+			//System.out.println("table check " + valid);
+			if (valid) {
+				valid = areColumns(fromTables, columns);
+				//System.out.println("column check " + valid);
+			}
+			if (valid) {
+				valid = areColumns(fromTables, orderColumns);
+				//System.out.println("orderby check " + valid);
+			}
+			for (String t : fromTables) {
+				if (!isTable(t)) {
+					valid = false;
+					break;
+				}
+			}
+			//System.out.println("table check " + valid);
+			if (valid) {
+				valid = areColumns(fromTables, columns);
+				//System.out.println("column check " + valid);
+			}
+			if (valid) {
+				valid = areColumns(fromTables, orderColumns);
+				//System.out.println("orderby check " + valid);
+			}
 			if (!valid) {
 				System.out.println("Query Invalid");
 			} else {
@@ -394,6 +443,24 @@ public class DBSystem {
 				return true;
 		}
 		return false;
+	}
+	
+	public boolean areColumns(ArrayList<String> tbls, ArrayList<String> col) {
+		for (String c : col) {
+			for (String tb : tbls) {
+				int index = -1;
+				for (Table t : tables) {
+					if (t.getName().equals(tb)) {
+						index = tables.indexOf(t);
+						break;
+					}
+				}
+				if(!tables.get(index).isColumn(c)) {
+					return false;
+				}
+			}
+		}
+		return true;
 	}
 }
 
