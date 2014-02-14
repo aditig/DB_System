@@ -37,4 +37,12 @@ public class Table {
 		attr.add(a);
 	}
 
+	public boolean isColumn(String name) {
+		for (Attribute a : attr) {
+			if (name.equals(a.getName())) {
+				return true;
+			}
+		}
+		return false;
+	}
 }
