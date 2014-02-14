@@ -6,24 +6,7 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 import com.foundationdb.sql.StandardException;
-import com.foundationdb.sql.parser.ColumnDefinitionNode;
-import com.foundationdb.sql.parser.CreateTableNode;
-import com.foundationdb.sql.parser.CursorNode;
-import com.foundationdb.sql.parser.FromList;
-import com.foundationdb.sql.parser.FromTable;
-import com.foundationdb.sql.parser.GroupByColumn;
-import com.foundationdb.sql.parser.GroupByList;
-import com.foundationdb.sql.parser.OrderByColumn;
-import com.foundationdb.sql.parser.OrderByList;
-import com.foundationdb.sql.parser.QueryTreeNode;
-import com.foundationdb.sql.parser.ResultColumn;
-import com.foundationdb.sql.parser.ResultColumnList;
-import com.foundationdb.sql.parser.SQLParser;
-import com.foundationdb.sql.parser.SelectNode;
-import com.foundationdb.sql.parser.StatementNode;
-import com.foundationdb.sql.parser.TableElementList;
-import com.foundationdb.sql.parser.TableElementNode;
-import com.foundationdb.sql.parser.ValueNode;
+import com.foundationdb.sql.parser.*;
 
 
 public class DBSystem {
@@ -31,6 +14,7 @@ public class DBSystem {
 	private String path;
 	private ArrayList<Table> tables = new ArrayList<Table>();	
 	private MainMemory m;
+	private String havingExpr, whereExpr;
 	
 	public void readConfig(String configFilePath) {
 		File file = new File(configFilePath);
@@ -175,7 +159,6 @@ public class DBSystem {
 			
 			TableElementList elem = createNode.getTableElementList();
 			
-			//TODO check if table already exists
 			if (isTable (createNode.getFullName())) {
 				System.out.println("Query Invalid");
 			} else {
@@ -205,6 +188,7 @@ public class DBSystem {
 	
 	public void selectCommand (String query) {
 		SQLParser parser = new SQLParser();
+		boolean valid = true;
         StatementNode node;
 		try {
 			node = parser.parseStatement(query);
@@ -233,8 +217,8 @@ public class DBSystem {
 			
 			ValueNode have = selNode.getHavingClause();
 			if(have != null) {
-				//have.treePrint();
-				//System.out.println(have.toString());
+				havingExpr = "";
+				valid = validateClause(have, fromTables);
 			}
 			
 			OrderByList orderList = ((CursorNode)node).getOrderByList();
@@ -252,7 +236,7 @@ public class DBSystem {
 			}
 			
 			//TODO validation here
-			boolean valid = true;
+			valid = true;
 			if (!valid) {
 				System.out.println("Query Invalid");
 			} else {
@@ -347,6 +331,57 @@ public class DBSystem {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public boolean validateClause (ValueNode node, ArrayList<String> fromTables) {
+		boolean valid = true;
+		if (node.getNodeType() >= NodeTypes.BINARY_DIVIDE_OPERATOR_NODE && node.getNodeType() <= NodeTypes.BINARY_TIMES_OPERATOR_NODE) {
+			BinaryOperatorNode b = (BinaryOperatorNode) node;
+			
+			ValueNode left = b.getLeftOperand();
+			String leftType;
+			if (left.getNodeType() == NodeTypes.COLUMN_REFERENCE) {
+				String col = left.getColumnName();
+				havingExpr.concat(col);
+				
+				for (String tb : fromTables) {
+					int index = -1;
+					for (Table t : tables) {
+						if (t.getName().equals(tb)) {
+							index = tables.indexOf(t);
+							break;
+						}
+					}
+					if(!tables.get(index).isColumn(col)) {
+						return false;
+					}
+				}
+				//leftType = ...
+			} else if (left.getNodeType() >= NodeTypes.DECIMAL_CONSTANT_NODE && left.getNodeType() <= NodeTypes.VARCHAR_CONSTANT_NODE) {
+				leftType = ((ConstantNode) left).getType().getSQLstring();
+				havingExpr.concat((String) ((ConstantNode) left).getValue());
+			}
+			
+			havingExpr.concat(b.getOperator());
+			
+			ValueNode right = b.getRightOperand();
+			String rightType;
+			if (right.getNodeType() == NodeTypes.COLUMN_REFERENCE) {
+				havingExpr.concat(right.getColumnName());
+				//rightType = ...
+			} else if (right.getNodeType() >= NodeTypes.DECIMAL_CONSTANT_NODE && right.getNodeType() <= NodeTypes.VARCHAR_CONSTANT_NODE) {
+				rightType = ((ConstantNode) right).getType().getSQLstring();
+				havingExpr.concat((String) ((ConstantNode) right).getValue());
+			}
+			
+			//valid = (leftType == rightType);
+		} else if (node.getNodeType() == NodeTypes.COLUMN_REFERENCE) {
+			havingExpr.concat(node.getColumnName());
+		} else if (node.getNodeType() >= NodeTypes.DECIMAL_CONSTANT_NODE && node.getNodeType() <= NodeTypes.VARCHAR_CONSTANT_NODE) {
+			ConstantNode c = (ConstantNode) node;
+			String type = c.getType().getSQLstring();
+		}
+		return valid;
 	}
 	
 	public void addTable(Table t) {

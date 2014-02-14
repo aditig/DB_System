@@ -28,6 +28,20 @@ public class Attribute {
 		return dataType;
 	}
 	
+	public boolean isDataType (String type) {
+		int t = 0;
+		if(type.toUpperCase().equals("INTEGER") && dataType != INTEGER)
+			return false;
+		else if(type.toUpperCase().equals("FLOAT") && dataType != FLOAT)
+			return false;
+		else if(type.toUpperCase().startsWith("VARCHAR") && dataType == VARCHAR) {
+			t = Integer.parseInt(type.substring(8, type.length() - 1));
+			if(t != stringLength)
+				return false;
+		}
+		return true;
+	}
+	
 	public int getStringLength() {
 		return stringLength;
 	}
