@@ -440,8 +440,37 @@ public class DBSystem {
 			whereExpr += " " + n.getOperator() + " ";
 			boolean rightValid = validateClause(n.getRightOperand(), fromTables);
 			return leftValid & rightValid;
+		} else if (node.getNodeType() == NodeTypes.LIKE_OPERATOR_NODE) {
+			LikeEscapeOperatorNode like = (LikeEscapeOperatorNode) node;
+			
+			String col = like.getReceiver().getColumnName();
+			String colType = null;
+			whereExpr += col;
+			
+			for (String tb : fromTables) {
+				int index = -1;
+				for (Table t : tables) {
+					if (t.getName().equals(tb)) {
+						index = tables.indexOf(t);
+						break;
+					}
+				}
+				if(!tables.get(index).isColumn(col)) {
+					return false;
+				} else {
+					Attribute a = tables.get(index).getColumn(col);
+					if (a == null)
+						return false;
+					colType = a.getDataTypeName();
+				}
+			}
+			
+			ConstantNode left = (ConstantNode) like.getLeftOperand();
+			if (!(left.getNodeType() == NodeTypes.CHAR_CONSTANT_NODE))
+				return false;
+			whereExpr += " LIKE '" + left.getValue() + "'";
+			
 		}
-		//TODO LIKE operator
 		return true;
 	}
 	
