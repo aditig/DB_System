@@ -2,6 +2,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -11,15 +12,16 @@ import com.foundationdb.sql.parser.*;
 
 public class DBSystem {
 	private int pageSize, numPages;
-	private String path;
+	private String path, configFile;
 	private ArrayList<Table> tables = new ArrayList<Table>();	
 	private MainMemory m;
 	private String havingExpr = "", whereExpr = "";
 	
-	public void readConfig(String configFilePath) {
+	public void readConfig(String configFilePath) throws IOException {
 		File file = new File(configFilePath);
+		configFile = configFilePath;
 		Scanner sc = null;
-		String colName;
+		String colName, colDataType;
 		
 		try {
 			sc = new Scanner(file);
@@ -37,13 +39,25 @@ public class DBSystem {
 				sc.next("BEGIN");
 				Table t = new Table(sc.next());
 				tables.add(t);
+				//System.out.println(t.getName());
+				FileWriter f = new FileWriter(path + t.getName() + ".data"); 
+				boolean isFirst = true;
 				while(!(sc.hasNext("END"))){
 					colName = sc.next();
+					colName = colName.substring(0, colName.length() - 1);
+					colDataType = sc.next();
 					//System.out.println(colName.substring(0,colName.length()-1));
 					//TODO create <table>.data file
-					t.addAttr(new Attribute(colName.substring(0, colName.length() - 1), sc.next()));
+					t.addAttr(new Attribute(colName, colDataType));
+					if(isFirst) {
+						isFirst = false;
+					} else {
+						f.write(",");
+					}
+					f.write(colName + ":" + colDataType);
 				}
 				sc.next("END");
+				f.close();
 			}
 			
 			m = new MainMemory(numPages);
@@ -68,7 +82,7 @@ public class DBSystem {
 			size = 0;
 			start = 0;
 			count = 0;
-			file = new File(t.getName() + ".csv");
+			file = new File(path + t.getName() + ".csv");
 			//TODO add path
 			try {
 				sc = new Scanner(file);
@@ -140,16 +154,19 @@ public class DBSystem {
         f.close();
 	}
 	
-	public void queryType (String query) {
+	public void queryType (String query) throws IOException {
 		String s[] = query.trim().split("\\s+");
 		if (s[0].equalsIgnoreCase("CREATE")) {
 			createCommand(query);
 		} else if (s[0].equalsIgnoreCase("SELECT")) {
 			selectCommand(query);
 		}
+		else {
+			System.out.println("Query invalid");
+		}
 	}
 	
-	public void createCommand (String query) {
+	public void createCommand (String query) throws IOException {
 		SQLParser parser = new SQLParser();
         StatementNode node;
 		try {
@@ -163,7 +180,11 @@ public class DBSystem {
 			} else {
 				Table table = new Table(createNode.getFullName());
 				System.out.println("Querytype:create\nTablename:" + table.getName());
+				FileWriter file1 = new FileWriter(path + table.getName() + ".data");
+				FileWriter file2 = new FileWriter(path + table.getName() + ".csv",true);
+				FileWriter file3 = new FileWriter(configFile,true);
 				
+				file3.append("BEGIN\n" + table.getName() + "\n");
 				boolean isFirst = true;
 				System.out.print("Attributes:");
 				for (TableElementNode t : elem) {
@@ -171,17 +192,27 @@ public class DBSystem {
 						isFirst = false;
 					} else {
 						System.out.print(",");
+						file1.write(",");
 					}
 					ColumnDefinitionNode c = (ColumnDefinitionNode) t;
+
 					String type = c.getType().getSQLstring();
 					if (type.equalsIgnoreCase("DOUBLE"))
 						type = "FLOAT";
 					table.addAttr(new Attribute (c.getName(), type));
 					
 					System.out.print(c.getName() + " " + type);
+					file1.write(c.getName() + ":" + type);
+					file3.append(c.getName() + ", " + type + "\n");
+
 				}
 				System.out.println("\n");
 				tables.add(table);
+				file3.append("END\n");
+				
+				file1.close();
+				file2.close();
+				file3.close();
 			}
 			
 		} catch (StandardException e) {
@@ -335,7 +366,7 @@ public class DBSystem {
 					System.out.println("NA");
 				}
 				else {
-					for (String s : columns) {
+					for (String s : orderColumns) {
 						if (first) {
 							first = false;
 						}
@@ -353,7 +384,7 @@ public class DBSystem {
 					System.out.println("NA");
 				}
 				else {
-					for (String s : columns) {
+					for (String s : groupColumns) {
 						if (first) {
 							first = false;
 						}
@@ -385,10 +416,13 @@ public class DBSystem {
 			
 			ValueNode left = b.getLeftOperand();
 			String leftType = null;
+			boolean found;
 			if (left.getNodeType() == NodeTypes.COLUMN_REFERENCE) {
+				//System.out.println("left column");
 				String col = left.getColumnName();
 				whereExpr += col;
 				
+				found = false;
 				for (String tb : fromTables) {
 					int index = -1;
 					for (Table t : tables) {
@@ -397,57 +431,97 @@ public class DBSystem {
 							break;
 						}
 					}
-					if(!tables.get(index).isColumn(col)) {
+					if (index < 0)
 						return false;
-					} else {
+					if(tables.get(index).isColumn(col)) {
+						//System.out.println("lfound");
+						found = true;
 						Attribute a = tables.get(index).getColumn(col);
-						if (a == null)
+						if (a == null) {
+							//System.out.println("f2");
 							return false;
+						}
+							
 						leftType = a.getDataTypeName();
+						break;
 					}
+					else //(!found)
+						continue;
+					/*else {
+						Attribute a = tables.get(index).getColumn(col);
+						if (a == null) {
+							//System.out.println("f2");
+							return false;
+						}
+							
+						leftType = a.getDataTypeName();
+					}*/
 				}
+				//System.out.println("fv "+ leftType);
+				//return found;
 			} else if (left.getNodeType() >= NodeTypes.DECIMAL_CONSTANT_NODE && left.getNodeType() <= NodeTypes.VARCHAR_CONSTANT_NODE) {
 				leftType = ((ConstantNode) left).getType().getSQLstring();
-				if (leftType.equals("INTEGER"))
-					whereExpr += Integer.toString((int) ((ConstantNode) left).getValue());
+				if (leftType.equals("INTEGER")) {
+					//System.out.println("left is int");
+					whereExpr += Integer.toString((int) ((ConstantNode) left).getValue());}
 				else if (leftType.equals("DOUBLE"))
 					whereExpr += Float.toString((int) ((ConstantNode) left).getValue());
 			} else
 				return false;
-			
+			//System.out.println("where! " + whereExpr);
 			whereExpr += " " + b.getOperator() + " ";
+			//System.out.println("where! " + whereExpr);
 			
 			ValueNode right = b.getRightOperand();
 			String rightType = null;
 			if (right.getNodeType() == NodeTypes.COLUMN_REFERENCE) {
+				//System.out.println("rightColumn");
 				String col = right.getColumnName();
 				whereExpr += col;
 				
+				found = false;
 				for (String tb : fromTables) {
 					int index = -1;
 					for (Table t : tables) {
 						if (t.getName().equals(tb)) {
 							index = tables.indexOf(t);
+							//System.out.println("tname "+ t.getName());
 							break;
 						}
 					}
-					if(!tables.get(index).isColumn(col)) {
-						return false;
-					} else {
+					if(tables.get(index).isColumn(col)) {
+						found = true;
+						//System.out.println("rfound " + col);
+						break;
+					} 
+					if (!found) {
+						//System.out.println("rnfound"+ col);
+						//return false;
+						continue;
+					}
+					else {
 						Attribute a = tables.get(index).getColumn(col);
-						if (a == null)
+						if (a == null) {
+							//System.out.println("rf");
 							return false;
+						}
 						rightType = a.getDataTypeName();
 					}
 				}
+				//if (!found)
+				return found;
+				//System.out.println("after right colmn "+found);
 			} else if (right.getNodeType() >= NodeTypes.DECIMAL_CONSTANT_NODE && right.getNodeType() <= NodeTypes.VARCHAR_CONSTANT_NODE) {
 				rightType = ((ConstantNode) right).getType().getSQLstring();
-				if (rightType.equals("INTEGER"))
-					whereExpr += Integer.toString((int) ((ConstantNode) right).getValue());
+				if (rightType.equals("INTEGER")) {
+					//System.out.println("where! " + whereExpr);
+					whereExpr += Integer.toString((int) ((ConstantNode) right).getValue()); }
 				else if (rightType.equals("DOUBLE"))
 					whereExpr += Float.toString((int) ((ConstantNode) right).getValue());
 			} else
 				return false;
+			//System.out.println("right is int");
+			//System.out.println("where! " + whereExpr);
 			//System.out.println(leftType + " " +  rightType);
 			
 			if (!((leftType.equals("INTEGER") || leftType.equals("DOUBLE") || leftType.equals("FLOAT")) && (rightType.equals("INTEGER") || rightType.equals("DOUBLE") || rightType.equals("FLOAT"))))
@@ -506,6 +580,7 @@ public class DBSystem {
 	
 	public boolean areColumns(ArrayList<String> tbls, ArrayList<String> col) {
 		for (String c : col) {
+			boolean found = false;
 			for (String tb : tbls) {
 				int index = -1;
 				for (Table t : tables) {
@@ -514,10 +589,13 @@ public class DBSystem {
 						break;
 					}
 				}
-				if(!tables.get(index).isColumn(c)) {
-					return false;
+				if(tables.get(index).isColumn(c)) {
+					found = true;
+					break;
 				}
 			}
+			if(!found)
+				return false;
 		}
 		return true;
 	}

@@ -45,7 +45,6 @@ public class Table {
 		}
 		return false;
 	}
-	
 	public Attribute getColumn (String name) {
 		for (Attribute a : attr) {
 			if (name.equals(a.getName())) {
