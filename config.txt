@@ -3,8 +3,8 @@ NUM_PAGES 4
 PATH_FOR_DATA /tmp/
 BEGIN
 countries
-ID, int
-CODE, String
-NAME, String
-CONTINENT, String
+ID, integer
+CODE, varchar(2)
+NAME, varchar(40)
+CONTINENT, varchar(2)
 END

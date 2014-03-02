@@ -39,7 +39,7 @@ public class Table {
 
 	public boolean isColumn(String name) {
 		for (Attribute a : attr) {
-			if (name.equals(a.getName())) {
+			if (name.equalsIgnoreCase(a.getName())) {
 				return true;
 			}
 		}
@@ -47,7 +47,7 @@ public class Table {
 	}
 	public Attribute getColumn (String name) {
 		for (Attribute a : attr) {
-			if (name.equals(a.getName())) {
+			if (name.equalsIgnoreCase(a.getName())) {
 				return a;
 			}
 		}
@@ -55,6 +55,8 @@ public class Table {
 	}
 	
 	public Attribute getColumn (int i) {
+		if(i >= attr.size())
+			return null;
 		return attr.get(i);
 	}
 	

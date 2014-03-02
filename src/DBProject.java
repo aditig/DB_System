@@ -19,9 +19,9 @@ public class DBProject {
 		DBSystem db = new DBSystem();
 		
 		//System.out.println("in " + args[1]);
-		if(args.length < 2)
-			System.out.println("Usage: java -cp fdb-sql-parser-1.1.0.jar:. DBProject <config file> <query file>");
-		db.readConfig(args[0]);
+		/*if(args.length < 2)
+			System.out.println("Usage: java -cp fdb-sql-parser-1.1.0.jar:. DBProject <config file> <query file>");*/
+		db.readConfig("config.txt"); //args[0]);
 		db.populateDBInfo();
 		/*db.getRecord("countries", 5);
 		db.getRecord("countries", 5);
@@ -33,7 +33,7 @@ public class DBProject {
 		db.getRecord("countries", 5);
 		db.insertRecord("countries", "record");*/
         
-		File file = new File(args[1]);
+		File file = new File("query.txt"); //args[1]);
 	try {
 		sc = new Scanner(file);
 		while(sc.hasNextLine()) {
