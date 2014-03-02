@@ -104,6 +104,7 @@ public class DBSystem {
 					}
 					count++;
 				}
+				t.setNumRecords(count);
 			}
 			catch (FileNotFoundException e) {
 				e.printStackTrace();
@@ -117,38 +118,15 @@ public class DBSystem {
 	}
 	
 	public String getRecord (String tableName, int recordId) {
-		int index = -1;
-		for (Table t : tables) {
-			if (t.getName().equals(tableName)) {
-				index = tables.indexOf(t);
-				break;
-			}
-		}
-		
-		Page pg = tables.get(index).getPage(recordId);
-		//System.out.println(pg.getTableName() + " " + pg.getStartId());
-		System.out.println(m.getPage(pg));
-		return pg.getRecord(recordId);
+		Table tb = getTable(tableName);
+		return tb.getRecord(recordId, m);
 	}
 		
 	public void insertRecord(String tableName, String record) throws IOException {
-		int index = -1;
-		Page pg;
-		for (Table t : tables) {
-			if(t.getName().equals(tableName)) {
-				index = tables.indexOf(t);
-				break;
-			}
-		}
-		
-		pg = tables.get(index).getLastPage();
-		if(record.length() >= pg.getFreeSpace()) {
-			tables.get(index).addPage(pg.getEndId() + 1, pageSize);
-			pg = tables.get(index).getLastPage();
-		}
-		m.getPage(pg);
-		pg.addRecord(record);
-		FileWriter f = new FileWriter(path + tableName + ".csv",true);
+		Table tb = getTable(tableName);
+		tb.addRecord(record, pageSize, m);
+		//FileWriter f = new FileWriter(path + tableName + ".csv",true);
+		FileWriter f = new FileWriter(tableName + ".csv",true);
         f.append(record + '\n');
         f.close();
 	}
@@ -297,7 +275,41 @@ public class DBSystem {
 				System.out.println("Query Invalid");
 			else {
 				//PRINT QUERY TOKENS
-				printSelect(isDistinct, fromTables, allCol, columns, orderColumns, groupColumns);
+				//printSelect(isDistinct, fromTables, allCol, columns, orderColumns, groupColumns);
+				//EXECUTE SELECT QUERY
+				Table tb = getTable(fromTables.get(0));
+				
+				int[] colNum = new int[columns.size()];
+				int i = 0;
+				if(!allCol) {
+					for(String col : columns) {
+						colNum[i] = tb.isColumn(col);
+						//System.out.println(colNum[i]);
+						i++;
+					}
+				}
+				
+				int numRecords = tb.getNumRecords();
+				String record;
+				String[] attr;
+				boolean first;
+				for(i = 0; i < numRecords; i++) {
+					record = tb.getRecord(i, m);
+					if(allCol)
+						System.out.println(record);
+					else {
+						first = true;
+						attr = record.split(",");
+						for(int j = 0; j < colNum.length; j++) {
+							if(first)
+								first = false;
+							else
+								System.out.print(",");
+							System.out.print(attr[colNum[j]]);
+						}
+						System.out.println();
+					}
+				}
 			}
 		} catch (StandardException e) {
 			e.printStackTrace();
@@ -356,12 +368,10 @@ public class DBSystem {
 	private void printStringArray (ArrayList<String> array) {
 		boolean first = true;
 		for (String s : array) {
-			if (first) {
+			if (first)
 				first = false;
-			}
-			else {
+			else
 				System.out.print(", ");
-			}
 			System.out.print(s);
 		}
 		System.out.println();
@@ -461,17 +471,11 @@ public class DBSystem {
 			whereExpr += col;
 			
 			for (String tb : fromTables) {
-				int index = -1;
-				for (Table t : tables) {
-					if (t.getName().equalsIgnoreCase(tb)) {
-						index = tables.indexOf(t);
-						break;
-					}
-				}
-				if(!tables.get(index).isColumn(col)) {
+				Table t = getTable(tb);
+				if(t.isColumn(col) < 0) {
 					return false;
 				} else {
-					Attribute a = tables.get(index).getColumn(col);
+					Attribute a = t.getColumn(col);
 					if (a == null)
 						return false;
 					colType = a.getDataTypeName();
@@ -499,18 +503,13 @@ public class DBSystem {
 		return null;
 	}
 	
+	
 	public boolean areColumns(ArrayList<String> tbls, ArrayList<String> col) {
 		for (String c : col) {
 			boolean found = false;
 			for (String tb : tbls) {
-				int index = -1;
-				for (Table t : tables) {
-					if (t.getName().equalsIgnoreCase(tb)) {
-						index = tables.indexOf(t);
-						break;
-					}
-				}
-				if(tables.get(index).isColumn(c)) {
+				Table t = getTable(tb);
+				if(t.isColumn(c) >= 0) {
 					found = true;
 					break;
 				}

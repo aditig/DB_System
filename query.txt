@@ -1,1 +1,1 @@
-select ID, CODE from countries where CODe = 'abc' order by id
+select ID, CONTINENT from countries where CODe like 'abc' order by id

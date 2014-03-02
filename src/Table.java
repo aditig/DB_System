@@ -2,11 +2,14 @@ import java.util.ArrayList;
 
 public class Table {
 	private String name;
+	private int numPages, numRecords;
 	private ArrayList<Page> pages = new ArrayList<Page>();
 	private ArrayList<Attribute> attr = new ArrayList<Attribute>();
 	
 	Table (String tablename) {
 		name = tablename;
+		numPages = 0;
+		numRecords = 0;
 		//System.out.println("Table name " + name);
 	}
 	
@@ -16,6 +19,7 @@ public class Table {
 	
 	public void addPage(int start, int size) {
 		pages.add(new Page(name, start, size));
+		numPages++;
 	}
 	
 	public Page getPage(int recordId) {
@@ -37,14 +41,15 @@ public class Table {
 		attr.add(a);
 	}
 
-	public boolean isColumn(String name) {
+	public int isColumn(String name) {
 		for (Attribute a : attr) {
 			if (name.equalsIgnoreCase(a.getName())) {
-				return true;
+				return attr.indexOf(a);
 			}
 		}
-		return false;
+		return -1;
 	}
+	
 	public Attribute getColumn (String name) {
 		for (Attribute a : attr) {
 			if (name.equalsIgnoreCase(a.getName())) {
@@ -62,5 +67,36 @@ public class Table {
 	
 	public int numColumns () {
 		return attr.size();
+	}
+
+	
+	public int getNumPages() {
+		return numPages;
+	}
+
+	public void addRecord (String record, int pageSize, MainMemory m) {
+		Page pg = getLastPage();
+		if(record.length() >= pg.getFreeSpace()) {
+			addPage(pg.getEndId() + 1, pageSize);
+			pg = getLastPage();
+		}
+		m.getPage(pg);
+		pg.addRecord(record);
+		numRecords++;
+	}
+	
+	public int getNumRecords() {
+		return numRecords;
+	}
+
+	public String getRecord(int recordId, MainMemory m) {
+		Page pg = getPage(recordId);
+		//System.out.println(m.getPage(pg));
+		m.getPage(pg);
+		return pg.getRecord(recordId);
+	}
+	
+	public void setNumRecords(int num) {
+		numRecords = num;
 	}
 }
