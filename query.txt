@@ -1,1 +1,1 @@
-select ID, CONTINENT from countries where CODe like 'abc' order by id
+select continent, id from countries where code like continent or id < 302600 or id > 302800

@@ -3,6 +3,7 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -16,6 +17,8 @@ public class DBSystem {
 	private ArrayList<Table> tables = new ArrayList<Table>();	
 	private MainMemory m;
 	private String havingExpr = "", whereExpr = "";
+	private ArrayList<Condition> cons = new ArrayList<Condition>();
+	private boolean and, or;
 	
 	public void readConfig(String configFilePath) throws IOException {
 		File file = new File(configFilePath);
@@ -202,6 +205,9 @@ public class DBSystem {
         StatementNode node;
         havingExpr = "";
         whereExpr = "";
+        cons.clear();
+        and = false;
+        or = false;
 		try {
 			//System.out.println(query);
 			node = parser.parseStatement(query);
@@ -275,7 +281,7 @@ public class DBSystem {
 				System.out.println("Query Invalid");
 			else {
 				//PRINT QUERY TOKENS
-				//printSelect(isDistinct, fromTables, allCol, columns, orderColumns, groupColumns);
+				printSelect(isDistinct, fromTables, allCol, columns, orderColumns, groupColumns);
 				//EXECUTE SELECT QUERY
 				Table tb = getTable(fromTables.get(0));
 				
@@ -284,7 +290,6 @@ public class DBSystem {
 				if(!allCol) {
 					for(String col : columns) {
 						colNum[i] = tb.isColumn(col);
-						//System.out.println(colNum[i]);
 						i++;
 					}
 				}
@@ -293,8 +298,26 @@ public class DBSystem {
 				String record;
 				String[] attr;
 				boolean first;
+				printStringArray(columns);
 				for(i = 0; i < numRecords; i++) {
 					record = tb.getRecord(i, m);
+					valid = !or;
+					for(Condition c : cons) {
+						if (or) {
+							if (c.evaluate(record)) {
+								valid = true;
+								break;
+							}
+						} else if (and) {
+							if (!c.evaluate(record)) {
+								valid = false;
+								break;
+							}
+						} else
+							valid = c.evaluate(record);
+					}
+					if(!valid)
+						continue;
 					if(allCol)
 						System.out.println(record);
 					else {
@@ -365,6 +388,7 @@ public class DBSystem {
 		System.out.println();
 	}
 	
+	
 	private void printStringArray (ArrayList<String> array) {
 		boolean first = true;
 		for (String s : array) {
@@ -377,8 +401,10 @@ public class DBSystem {
 		System.out.println();
 	}
 	
+	
 	private boolean validateClause (ValueNode node, ArrayList<String> fromTables) {
 		if (node.getNodeType() >= NodeTypes.BINARY_EQUALS_OPERATOR_NODE && node.getNodeType() <= NodeTypes.BINARY_NOT_EQUALS_OPERATOR_NODE) {
+			Condition cond = new Condition();
 			BinaryOperatorNode b = (BinaryOperatorNode) node;
 			
 			ValueNode left = b.getLeftOperand();
@@ -387,7 +413,6 @@ public class DBSystem {
 			if (left.getNodeType() == NodeTypes.COLUMN_REFERENCE) {
 				//System.out.println("left column");
 				String col = left.getColumnName();
-				whereExpr += col;
 				
 				found = false;
 				for (String tb : fromTables) {
@@ -395,31 +420,41 @@ public class DBSystem {
 					Attribute a = t.getColumn(col);
 					if(a != null) {
 						found = true;
+						col = t.getColumn(t.isColumn(col)).getName();
 						leftType = a.getDataTypeName();
+						cond.setLeft(Condition.IS_COLUMN, t.isColumn(col), a.getDataType());
 						break;
 					}
 				}
 				if(!found)
 					return false;
+				whereExpr += col;
 			} else if (left.getNodeType() >= NodeTypes.DECIMAL_CONSTANT_NODE && left.getNodeType() <= NodeTypes.VARCHAR_CONSTANT_NODE) {
 				leftType = ((ConstantNode) left).getType().getSQLstring();
-				if (leftType.equals("INTEGER"))
-					whereExpr += Integer.toString((int) ((ConstantNode) left).getValue());
-				else if (leftType.equals("DOUBLE"))
-					whereExpr += Float.toString((int) ((ConstantNode) left).getValue());
+				if (leftType.equals("INTEGER")) {
+					int num = (int) ((ConstantNode) left).getValue();
+					whereExpr += Integer.toString(num);
+					cond.setLeft(Condition.IS_NUMBER, (new Integer(num)).floatValue());
+				} else if (leftType.startsWith("DECIMAL")) {
+					leftType = "FLOAT";
+					float num = ((BigDecimal) ((ConstantNode) left).getValue()).floatValue();
+					whereExpr += Float.toString(num);
+					cond.setLeft(Condition.IS_NUMBER, num);
+				}
 			} else if (left.getNodeType() == NodeTypes.CHAR_CONSTANT_NODE){
 				leftType = "VARCHAR";
-				whereExpr += "'" + ((ConstantNode) left).getValue() + "'";
+				whereExpr += "'" + ((ConstantNode) left).getValue().toString() + "'";
+				cond.setLeft(Condition.IS_VARCHAR, ((ConstantNode) left).getValue().toString());
 			} else
 				return false;
 
 			whereExpr += " " + b.getOperator() + " ";
+			cond.setOperator(b.getOperator());
 			
 			ValueNode right = b.getRightOperand();
 			String rightType = null;
 			if (right.getNodeType() == NodeTypes.COLUMN_REFERENCE) {
 				String col = right.getColumnName();
-				whereExpr += col;
 				
 				found = false;
 				for (String tb : fromTables) {
@@ -427,38 +462,52 @@ public class DBSystem {
 					Attribute a = t.getColumn(col);
 					if(a != null) {
 						found = true;
+						col = t.getColumn(t.isColumn(col)).getName();
+						cond.setRight(Condition.IS_COLUMN, t.isColumn(col), a.getDataType());
 						rightType = a.getDataTypeName();
 						break;
 					}
 				}
 				if(!found)
 					return false;
+				whereExpr += col;
 
 			} else if (right.getNodeType() >= NodeTypes.DECIMAL_CONSTANT_NODE && right.getNodeType() <= NodeTypes.VARCHAR_CONSTANT_NODE) {
 				rightType = ((ConstantNode) right).getType().getSQLstring();
-				if (rightType.equals("INTEGER"))
-					whereExpr += Integer.toString((int) ((ConstantNode) right).getValue());
-				else if (rightType.equals("DOUBLE"))
-					whereExpr += Float.toString((int) ((ConstantNode) right).getValue());
+				if (rightType.equals("INTEGER")) {
+					int num = (int) ((ConstantNode) right).getValue();
+					whereExpr += Integer.toString(num);
+					cond.setRight(Condition.IS_NUMBER, (new Integer(num)).floatValue());
+				} else if (rightType.startsWith("DECIMAL")) {
+					rightType = "FLOAT";
+					float num = ((BigDecimal) ((ConstantNode) right).getValue()).floatValue();
+					whereExpr += Float.toString(num);
+					cond.setRight(Condition.IS_NUMBER, num);
+				}
 			} else if (right.getNodeType() == NodeTypes.CHAR_CONSTANT_NODE){
 				rightType = "VARCHAR";
-				whereExpr += "'" + ((ConstantNode) right).getValue() + "'";
+				whereExpr += "'" + ((ConstantNode) right).getValue().toString() + "'";
+				cond.setRight(Condition.IS_VARCHAR, ((ConstantNode) right).getValue().toString());
 			} else
 				return false;
 			
-			if(leftType.equals("VARCHAR") && rightType.equals("VARCHAR"))
-				System.out.println("sahi");
-			if (!(leftType.startsWith("VARCHAR") && rightType.startsWith("VARCHAR"))
-					&&
-				!((leftType.equals("INTEGER") || leftType.equals("DOUBLE") || leftType.equals("FLOAT")) 
-						&& 
-				(rightType.equals("INTEGER") || rightType.equals("DOUBLE") || rightType.equals("FLOAT")))) {
-				System.out.println("corbgerl");
+			if (leftType.startsWith("VARCHAR") && rightType.startsWith("VARCHAR") && !(b.getNodeType() == NodeTypes.BINARY_EQUALS_OPERATOR_NODE)) {
+				//System.out.println("here");
 				return false;
 			}
+			if (!(leftType.startsWith("VARCHAR") && rightType.startsWith("VARCHAR")) &&
+				!((leftType.equals("INTEGER") || leftType.equals("DOUBLE") || leftType.equals("FLOAT")) && 
+				(rightType.equals("INTEGER") || rightType.equals("DOUBLE") || rightType.equals("FLOAT")))) {
+				return false;
+			}
+			cons.add(cond);
 			
 		} else if (node.getNodeType() == NodeTypes.AND_NODE || node.getNodeType() == NodeTypes.OR_NODE) {
 			BinaryOperatorNode n = (BinaryOperatorNode) node;
+			if (node.getNodeType() == NodeTypes.AND_NODE)
+				and = true;
+			else
+				or = true;
 			boolean leftValid = validateClause(n.getLeftOperand(), fromTables);
 			whereExpr += " " + n.getOperator() + " ";
 			boolean rightValid = validateClause(n.getRightOperand(), fromTables);
@@ -466,35 +515,61 @@ public class DBSystem {
 		} else if (node.getNodeType() == NodeTypes.LIKE_OPERATOR_NODE) {
 			LikeEscapeOperatorNode like = (LikeEscapeOperatorNode) node;
 			
+			Condition cond = new Condition();
 			String col = like.getReceiver().getColumnName();
-			String colType = null;
-			whereExpr += col;
+			String leftType = null;
+			cond.setOperator(Condition.IS_LIKE);
 			
+			boolean found = false;
 			for (String tb : fromTables) {
 				Table t = getTable(tb);
-				if(t.isColumn(col) < 0) {
-					return false;
-				} else {
-					Attribute a = t.getColumn(col);
-					if (a == null)
+				Attribute a = t.getColumn(col);
+				if(a != null) {
+					found = true;
+					col = t.getColumn(t.isColumn(col)).getName();
+					cond.setLeft(Condition.IS_COLUMN, t.isColumn(col), a.getDataType());
+					if(!(a.getDataType() == Attribute.VARCHAR))
 						return false;
-					colType = a.getDataTypeName();
+					break;
 				}
 			}
-			
-			ConstantNode left = (ConstantNode) like.getLeftOperand();
-			if (!(left.getNodeType() == NodeTypes.CHAR_CONSTANT_NODE))
+			if(!found)
 				return false;
-			whereExpr += " LIKE '" + left.getValue() + "'";
-			
+			whereExpr += col;
+			if(like.getLeftOperand().getNodeType() == NodeTypes.COLUMN_REFERENCE) {
+				col = like.getLeftOperand().getColumnName();
+				found = false;
+				for (String tb : fromTables) {
+					Table t = getTable(tb);
+					Attribute a = t.getColumn(col);
+					if(a != null) {
+						found = true;
+						col = t.getColumn(t.isColumn(col)).getName();
+						cond.setRight(Condition.IS_COLUMN, t.isColumn(col), a.getDataType());
+						if(!(a.getDataType() == Attribute.VARCHAR))
+							return false;
+						break;
+					}
+				}
+				if(!found)
+					return false;
+				whereExpr += " LIKE " + col;
+			} else if (like.getLeftOperand().getNodeType() == NodeTypes.CHAR_CONSTANT_NODE) {
+				ConstantNode right = ((ConstantNode) like.getLeftOperand());
+				whereExpr += " LIKE '" + right.getValue().toString() + "'";
+				cond.setRight(Condition.IS_VARCHAR, right.getValue().toString());
+			}
+			cons.add(cond);			
 		}
 		return true;
 	}
+	
 	
 	private void addTable(Table t) {
 		tables.add(t);
 	}
 
+	
 	private Table getTable(String name) {
 		for (Table t : tables) {
 			if (t.getName().equalsIgnoreCase(name))
@@ -509,7 +584,9 @@ public class DBSystem {
 			boolean found = false;
 			for (String tb : tbls) {
 				Table t = getTable(tb);
-				if(t.isColumn(c) >= 0) {
+				int index = t.isColumn(c);
+				if(index >= 0) {
+					col.set(col.indexOf(c), t.getColumn(index).getName());
 					found = true;
 					break;
 				}
